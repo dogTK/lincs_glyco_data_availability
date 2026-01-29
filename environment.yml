@@ -1,0 +1,27 @@
+name: l1000-glyco
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - jupyterlab=4.*
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - seaborn
+  - rdkit
+  - scikit-learn
+  - h5py
+  - xgboost
+  - lightgbm
+  - optuna
+  - pytorch
+  - biopython
+  - conda-lock
+  - pip
+  - pip:
+      - polars
+      - mordred
+      - deepchem
+      - rdkit-pypi
+      - joypy
