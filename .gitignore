@@ -42,3 +42,6 @@ credentials.json
 # Temporary
 tmp/
 temp/
+
+# Large files (exceeding GitHub 100MB limit)
+notebooks/results/qc/zscore_distribution.svg
