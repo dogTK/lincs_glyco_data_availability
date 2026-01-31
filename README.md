@@ -32,8 +32,7 @@ This repository contains the analysis pipeline and results for characterizing dr
 │   │   ├── 00b_create_atc_master_table.ipynb
 │   │   ├── 01_create_ctl_rnaseq_glyco_table.ipynb
 │   │   └── 11_compound_name_mapping.ipynb
-│   ├── GlycoEnzOnto/       # Glycosylation enzyme ontology
-│   └── results/            # Analysis outputs
+│   └── GlycoEnzOnto/       # Glycosylation enzyme ontology
 ├── src/                    # Python modules
 │   ├── compound_name_mapping.py
 │   ├── task2_phh_rank_similarity.py
@@ -64,12 +63,22 @@ Key dependencies:
 ## Usage
 
 1. Set up the conda environment
-2. Configure Snowflake credentials (for data extraction from private database)
+2. Configure Snowflake credentials (see below)
 3. Run notebooks in order:
    - `engineering/` notebooks for data preparation
    - `analytics/` notebooks for analysis
 
-Note: Some notebooks require access to a Snowflake database with pre-loaded LINCS data.
+### Snowflake Configuration
+
+The notebooks require access to a Snowflake database with pre-loaded LINCS data. Set the following environment variables:
+
+```bash
+export SNOWFLAKE_USER="your_username"
+export SNOWFLAKE_ACCOUNT="your_account_identifier"
+export SNOWFLAKE_PRIVATE_KEY_PATH="~/.ssh/your_private_key.pem"
+```
+
+The code uses key-pair authentication. See [Snowflake documentation](https://docs.snowflake.com/en/user-guide/key-pair-auth) for setup instructions.
 
 ## Citation
 
