@@ -7,7 +7,7 @@
 4. HDAC inhibitors: gene-level response of PHH-similar / PHH-dissimilar marker genes
 5. HDAC inhibitors: module eigengene profile and perturbation-strength-matched control
 6. All MOA classes: shift of lysosomal-degradation / nucleotide-sugar / sialylation gene scores
-7. Figure 3B, 3C
+7. Figure 4A, 4B, 4D
 """
 from pathlib import Path
 
@@ -237,7 +237,7 @@ def plot_figures(enr, side):
     plt.rcParams.update({'axes.labelsize': 16, 'axes.titlesize': 16, 'xtick.labelsize': 14,
                          'ytick.labelsize': 14, 'legend.fontsize': 14, 'font.size': 14, 'svg.fonttype': 'none'})
 
-    # Fig 3B: ranked enrichment of Hub MOA classes along the PHH similarity ranking
+    # Fig 4A: ranked enrichment of Hub MOA classes along the PHH similarity ranking
     e = enr[(enr['category_type'] == 'HUB_MOA') & (enr['p_value'] < 0.05)].sort_values('NES')
     fig, ax = plt.subplots(figsize=(8, 9))
     sc = ax.scatter(e['NES'], np.arange(len(e)), s=e['set_size'] * 10, c=-np.log10(e['q_value']),
@@ -248,10 +248,10 @@ def plot_figures(enr, side):
     ax.set_xlabel('NES (positive: PHH-similar)')
     fig.colorbar(sc, ax=ax, label='−log10(q)', shrink=0.5)
     fig.tight_layout()
-    savefig(fig, 'fig3b_hub_moa_phh_ranked_enrichment')
+    savefig(fig, 'fig4a_hub_moa_phh_ranked_enrichment')
     plt.close(fig)
 
-    # Fig 3C: shift of each program score per MOA class (one dot per class); HDAC inhibitors in red
+    # Fig 4B: shift of each program score per MOA class (one dot per class); HDAC inhibitors in red
     programs = [('lysosomal_degradation', 'Lysosomal\ndegradation'), ('nucleotide_sugar', 'Nucleotide\nsugar synthesis'),
                 ('sialylation', 'Terminal\nsialylation')]
     rng = np.random.default_rng(0)
@@ -270,7 +270,33 @@ def plot_figures(enr, side):
     ax.set_ylabel('Shift vs other compounds (rank-biserial r)')
     ax.set_xlim(-0.5, len(programs) - 0.5)
     fig.tight_layout()
-    savefig(fig, 'fig3c_moa_program_shift')
+    savefig(fig, 'fig4b_moa_program_shift')
+    plt.close(fig)
+
+
+def plot_gene_level(genes):
+    """Figure 4D: per-gene shift (hydroxamate HDAC inhibitors vs other compounds), PHH-similar vs PHH-dissimilar genes"""
+    plt.rcParams.update({'axes.labelsize': 16, 'xtick.labelsize': 14, 'ytick.labelsize': 13, 'font.size': 14,
+                         'svg.fonttype': 'none'})
+    g = genes.copy()
+    g['group'] = np.where(g['side'].str.startswith('PHH-similar'), 'Lysosomal degradation',
+                          np.where(g['gene'].str.startswith('ST'), 'Terminal sialylation', 'Nucleotide sugar synthesis'))
+    order = ['Lysosomal degradation', 'Nucleotide sugar synthesis', 'Terminal sialylation']
+    g['group'] = pd.Categorical(g['group'], order)
+    g = g.sort_values(['group', 'r_rb'], ascending=[False, True])
+    colors = {'Lysosomal degradation': '#b2182b', 'Nucleotide sugar synthesis': '#2166ac', 'Terminal sialylation': '#5e9fd1'}
+    fig, ax = plt.subplots(figsize=(6, 10))
+    y = np.arange(len(g))
+    ax.barh(y, g['r_rb'], color=[colors[k] if q < 0.05 else 'lightgray' for k, q in zip(g['group'], g['q_value'])])
+    ax.set_yticks(y)
+    ax.set_yticklabels(g['gene'])
+    ax.axvline(0, color='gray', lw=1)
+    ax.set_xlabel('Shift vs other compounds (r)')
+    for k in order:
+        ax.barh([np.nan], [np.nan], color=colors[k], label=k)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.4, -0.09), fontsize=11, frameon=False)
+    fig.tight_layout()
+    savefig(fig, 'fig4d_hdaci_gene_level')
     plt.close(fig)
 
 def main():
@@ -295,6 +321,7 @@ def main():
     hdaci_modules(ph_me)
     side = moa_side_shift(ph, cz)
     plot_figures(enr, side)
+    plot_gene_level(pd.read_csv(OUT / 'hdaci_marker_gene_response.csv'))
 
 
 if __name__ == '__main__':

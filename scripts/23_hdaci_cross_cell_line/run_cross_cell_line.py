@@ -3,12 +3,15 @@
 For LINCS cell lines with many compounds (and the second liver cancer line HUH7), compare hydroxamate HDAC
 inhibitors with all non-HDAC compounds on the three program scores used in script 20 (lysosomal degradation,
 nucleotide sugar synthesis, terminal sialylation). Compound-level values are medians of z-scores over all
-conditions, computed in Snowflake. Output: Supplementary Table S15.
+conditions, computed in Snowflake. Outputs: Supplementary Table S15 and Figure 4C.
 """
 import os
 import sys
 from pathlib import Path
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from cryptography.hazmat.primitives import serialization
@@ -90,7 +93,38 @@ def main():
     res.to_csv(OUT / 'hdaci_cross_cell_line_program_shift.csv', index=False)
     show = ['cell', 'n_hydroxamate', 'n_other'] + [f'{s}_{k}' for s in SIDE_GENE_SETS for k in ('r', 'q')]
     print(res[show].round(3).to_string(index=False))
+    plot_cross_cell(res)
 
+
+
+def plot_cross_cell(res):
+    """Figure 4C: rank-biserial r of hydroxamate HDAC inhibitors per cell line and program (* q < 0.05)"""
+    plt.rcParams.update({'axes.labelsize': 16, 'xtick.labelsize': 14, 'ytick.labelsize': 14, 'font.size': 14,
+                         'svg.fonttype': 'none'})
+    progs = [('lysosomal_degradation', 'Lysosomal\ndegradation'), ('nucleotide_sugar', 'Nucleotide\nsugar synthesis'),
+             ('sialylation', 'Terminal\nsialylation')]
+    d = res.dropna(subset=['lysosomal_degradation_r']).copy()
+    d['order'] = (d['cell'] != 'HEPG2').astype(int)
+    d = d.sort_values(['order', 'lysosomal_degradation_r'], ascending=[True, False])
+    r = d[[f'{p}_r' for p, _ in progs]].to_numpy()
+    q = d[[f'{p}_q' for p, _ in progs]].to_numpy()
+    fig, ax = plt.subplots(figsize=(8, 7))
+    im = ax.imshow(r, cmap='RdBu_r', vmin=-1, vmax=1, aspect='auto')
+    for i in range(r.shape[0]):
+        for j in range(r.shape[1]):
+            ax.text(j, i, f'{r[i, j]:.2f}' + ('*' if q[i, j] < 0.05 else ''), ha='center', va='center', fontsize=12,
+                    color='white' if abs(r[i, j]) > 0.6 else 'black')
+    ax.set_xticks(range(len(progs)))
+    ax.set_xticklabels([lab for _, lab in progs], fontsize=12)
+    ax.set_yticks(range(len(d)))
+    ax.set_yticklabels([c if c != 'HEPG2' else 'HepG2' for c in d['cell']])
+    fig.colorbar(im, ax=ax, label='Rank-biserial r', shrink=0.6)
+    fig.tight_layout()
+    outdir = ROOT / 'results/figures/fig4c_hdaci_cross_cell_line'
+    outdir.mkdir(parents=True, exist_ok=True)
+    for ext in ('png', 'pdf', 'svg'):
+        fig.savefig(outdir / f'fig4c_hdaci_cross_cell_line.{ext}', dpi=600, bbox_inches='tight')
+    plt.close(fig)
 
 if __name__ == '__main__':
     main()
