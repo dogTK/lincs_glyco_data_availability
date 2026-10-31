@@ -56,7 +56,7 @@ def savefig(fig, name):
     outdir = FIGDIR / name
     outdir.mkdir(parents=True, exist_ok=True)
     for ext in ('png', 'pdf', 'svg'):
-        fig.savefig(outdir / f'{name}.{ext}', dpi=300, bbox_inches='tight')
+        fig.savefig(outdir / f'{name}.{ext}', dpi=600, bbox_inches='tight')
 
 
 # ---------------------------------------------------------------- 1. annotation
@@ -234,47 +234,44 @@ def moa_side_shift(ph, cz):
 
 # ---------------------------------------------------------------- 7. figures
 def plot_figures(enr, side):
-    plt.rcParams.update({'axes.labelsize': 18, 'axes.titlesize': 16, 'xtick.labelsize': 16,
-                         'ytick.labelsize': 16, 'legend.fontsize': 16, 'font.size': 16, 'svg.fonttype': 'none'})
+    plt.rcParams.update({'axes.labelsize': 16, 'axes.titlesize': 16, 'xtick.labelsize': 14,
+                         'ytick.labelsize': 14, 'legend.fontsize': 14, 'font.size': 14, 'svg.fonttype': 'none'})
 
     # Fig 3B: ranked enrichment of Hub MOA classes along the PHH similarity ranking
     e = enr[(enr['category_type'] == 'HUB_MOA') & (enr['p_value'] < 0.05)].sort_values('NES')
-    fig, ax = plt.subplots(figsize=(10, 10))
-    sc = ax.scatter(e['NES'], np.arange(len(e)), s=e['set_size'] * 12, c=-np.log10(e['q_value']),
+    fig, ax = plt.subplots(figsize=(8, 9))
+    sc = ax.scatter(e['NES'], np.arange(len(e)), s=e['set_size'] * 10, c=-np.log10(e['q_value']),
                     cmap='Reds', vmin=0, edgecolors='black', linewidths=0.5)
     ax.set_yticks(np.arange(len(e)))
     ax.set_yticklabels([f'{c} (n={n})' for c, n in zip(e['category'], e['set_size'])])
     ax.axvline(0, color='gray', lw=1)
     ax.set_xlabel('NES (positive: PHH-similar)')
-    fig.colorbar(sc, ax=ax, label='−log10(q)', shrink=0.6)
+    fig.colorbar(sc, ax=ax, label='−log10(q)', shrink=0.5)
     fig.tight_layout()
     savefig(fig, 'fig3b_hub_moa_phh_ranked_enrichment')
     plt.close(fig)
 
-    # Fig 3C: lysosomal-degradation shift vs nucleotide-sugar / sialylation shift per MOA class
-    w = side.pivot_table(index=['moa', 'n'], columns='side', values='r_rb').reset_index()
-    q = side.pivot_table(index='moa', columns='side', values='q_value')
-    fig, axes = plt.subplots(1, 2, figsize=(14, 7), sharex=True)
-    for ax, yside, label in [(axes[0], 'nucleotide_sugar', 'Nucleotide sugar synthesis'),
-                             (axes[1], 'sialylation', 'Terminal sialylation')]:
-        sig = (q.loc[w['moa'], 'lysosomal_degradation'].values < 0.05) | (q.loc[w['moa'], yside].values < 0.05)
-        ax.scatter(w.loc[~sig, 'lysosomal_degradation'], w.loc[~sig, yside], s=25, c='lightgray')
-        ax.scatter(w.loc[sig, 'lysosomal_degradation'], w.loc[sig, yside], s=40, c='#2166ac')
-        for _, row in w[sig & (w['moa'] != 'HDAC inhibitor').values].iterrows():
-            ax.annotate(row['moa'], (row['lysosomal_degradation'], row[yside]), xytext=(6, -14),
-                        textcoords='offset points', fontsize=11, color='#2166ac')
-        hd = w['moa'] == 'HDAC inhibitor'
-        ax.scatter(w.loc[hd, 'lysosomal_degradation'], w.loc[hd, yside], s=120, c='#b2182b', edgecolors='black')
-        ax.annotate('HDAC inhibitor', (w.loc[hd, 'lysosomal_degradation'].iloc[0], w.loc[hd, yside].iloc[0]),
-                    xytext=(-10, 12), textcoords='offset points', ha='right', fontsize=14)
-        ax.axhline(0, color='gray', lw=1)
-        ax.axvline(0, color='gray', lw=1)
-        ax.set_xlabel('Lysosomal degradation shift (r)')
-        ax.set_ylabel(f'{label} shift (r)')
+    # Fig 3C: shift of each program score per MOA class (one dot per class); HDAC inhibitors in red
+    programs = [('lysosomal_degradation', 'Lysosomal\ndegradation'), ('nucleotide_sugar', 'Nucleotide\nsugar synthesis'),
+                ('sialylation', 'Terminal\nsialylation')]
+    rng = np.random.default_rng(0)
+    fig, ax = plt.subplots(figsize=(6, 9))
+    for k, (prog, _) in enumerate(programs):
+        d = side[side['side'] == prog]
+        x = k + rng.uniform(-0.18, 0.18, len(d))
+        sig = (d['q_value'] < 0.05).values
+        hd = (d['moa'] == 'HDAC inhibitor').values
+        ax.scatter(x[~sig & ~hd], d['r_rb'][~sig & ~hd], s=22, c='lightgray')
+        ax.scatter(x[sig & ~hd], d['r_rb'][sig & ~hd], s=40, c='#2166ac')
+        ax.scatter(np.full(hd.sum(), k), d['r_rb'][hd], s=150, c='#b2182b', edgecolors='black', zorder=3)
+    ax.axhline(0, color='gray', lw=1)
+    ax.set_xticks(range(len(programs)))
+    ax.set_xticklabels([lab for _, lab in programs])
+    ax.set_ylabel('Shift vs other compounds (rank-biserial r)')
+    ax.set_xlim(-0.5, len(programs) - 0.5)
     fig.tight_layout()
-    savefig(fig, 'fig3c_moa_lysosomal_vs_biosynthetic_shift')
+    savefig(fig, 'fig3c_moa_program_shift')
     plt.close(fig)
-
 
 def main():
     ph = annotate()

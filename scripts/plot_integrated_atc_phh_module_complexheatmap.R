@@ -246,7 +246,7 @@ build_integrated_heatmap <- function(nes_mat, q_mat, delta_table, dist_table,
     if (nzchar(star)) {
       tcol <- if (!is.na(nv) && abs(nv) > 0.8) "white" else "black"
       grid.text(star, x, y,
-                gp = gpar(fontsize = 11, col = tcol, fontface = "bold"))
+                gp = gpar(fontsize = 15, col = tcol, fontface = "bold"))
     }
   }
 
@@ -337,7 +337,7 @@ build_integrated_heatmap <- function(nes_mat, q_mat, delta_table, dist_table,
         draw_ridge(dens_s[[i]], y + baseline_off, fill_s)
       }
 
-      grid.xaxis(at = ticks, gp = gpar(fontsize = 8), main = TRUE)
+      grid.xaxis(at = ticks, gp = gpar(fontsize = 12), main = TRUE)
       popViewport()
     }
   })
@@ -355,13 +355,13 @@ build_integrated_heatmap <- function(nes_mat, q_mat, delta_table, dist_table,
     ),
     `r` = anno_text(
       rbc_text,
-      gp       = gpar(fontsize = 10, fontface = "bold"),
+      gp       = gpar(fontsize = 14, fontface = "bold"),
       just     = "center",
       location = unit(0.5, "npc"),
-      width    = max_text_width(rbc_text, gp = gpar(fontsize = 10, fontface = "bold")) +
+      width    = max_text_width(rbc_text, gp = gpar(fontsize = 14, fontface = "bold")) +
                  unit(4, "mm")
     ),
-    annotation_name_gp      = gpar(fontsize = 10, fontface = "bold"),
+    annotation_name_gp      = gpar(fontsize = 14, fontface = "bold"),
     annotation_name_side    = "top",
     annotation_name_rot     = 0,
     annotation_name_offset  = unit(2, "mm"),
@@ -378,22 +378,22 @@ build_integrated_heatmap <- function(nes_mat, q_mat, delta_table, dist_table,
 
     row_labels       = module_labels[module_order],
     row_names_side   = "left",
-    row_names_gp     = gpar(fontsize = 9, lineheight = 1.05),
+    row_names_gp     = gpar(fontsize = 12, lineheight = 0.95),
     row_names_max_width = max_text_width(module_labels[module_order],
-                                         gp = gpar(fontsize = 9, lineheight = 1.05)) +
+                                         gp = gpar(fontsize = 12, lineheight = 0.95)) +
                          unit(2, "mm"),
     row_title        = "WGCNA Module (ME)",
-    row_title_gp     = gpar(fontsize = 12, fontface = "bold"),
+    row_title_gp     = gpar(fontsize = 15, fontface = "bold"),
     row_title_side   = "left",
 
     column_labels           = atc_order,
     column_names_side       = "top",
     column_names_rot        = 0,
     column_names_centered   = TRUE,
-    column_names_gp         = gpar(fontsize = 10),
+    column_names_gp         = gpar(fontsize = 15),
     column_names_max_height = unit(5.0, "cm"),
     column_title            = "ATC Class (L1)",
-    column_title_gp         = gpar(fontsize = 12, fontface = "bold"),
+    column_title_gp         = gpar(fontsize = 15, fontface = "bold"),
     column_title_side       = "bottom",
 
     rect_gp  = gpar(col = "white", lwd = 0.5),
@@ -404,8 +404,8 @@ build_integrated_heatmap <- function(nes_mat, q_mat, delta_table, dist_table,
 
     heatmap_legend_param = list(
       title            = "GSEA NES",
-      title_gp         = gpar(fontsize = 11, fontface = "bold"),
-      labels_gp        = gpar(fontsize = 10),
+      title_gp         = gpar(fontsize = 14, fontface = "bold"),
+      labels_gp        = gpar(fontsize = 13),
       at               = c(-2, -1, 0, 1, 2),
       color_bar        = "continuous",
       legend_direction = "horizontal",
@@ -413,8 +413,8 @@ build_integrated_heatmap <- function(nes_mat, q_mat, delta_table, dist_table,
       title_position   = "topcenter"
     ),
 
-    width  = unit(11, "cm"),
-    height = unit(length(module_order) * 1.15, "cm")
+    width  = unit(13, "cm"),
+    height = unit(length(module_order) * 2.0, "cm")
   )
 
   list(ht = ht)
@@ -428,8 +428,8 @@ make_extra_legends <- function() {
     labels    = c("PHH-similar (top 10%)", "PHH-dissimilar (bottom 10%)"),
     legend_gp = gpar(fill = c(COLOR_SIMILAR, COLOR_DISSIMILAR), col = "black"),
     title     = "PHH similarity group",
-    title_gp  = gpar(fontsize = 10, fontface = "bold"),
-    labels_gp = gpar(fontsize = 9),
+    title_gp  = gpar(fontsize = 14, fontface = "bold"),
+    labels_gp = gpar(fontsize = 13),
     border    = "black"
   )
 
@@ -440,8 +440,8 @@ make_extra_legends <- function() {
     legend_gp = gpar(fill = "white", col = "black"),
     border    = "black",
     title     = "Heatmap cell\n(GSEA FDR)",
-    title_gp  = gpar(fontsize = 10, fontface = "bold"),
-    labels_gp = gpar(fontsize = 9)
+    title_gp  = gpar(fontsize = 14, fontface = "bold"),
+    labels_gp = gpar(fontsize = 13)
   )
 
   packLegend(group_lgd, gsea_sig_lgd,
@@ -462,11 +462,11 @@ draw_and_decorate <- function(ht, extra_lgd, title) {
 }
 
 save_outputs <- function(ht, extra_lgd, outdir, stem,
-                         width_in = 12, height_in = 7) {
+                         width_in = 14, height_in = 11) {
   title <- ""
 
   png(file.path(outdir, paste0(stem, ".png")),
-      width = width_in * 300, height = height_in * 300, res = 300)
+      width = width_in * 600, height = height_in * 600, res = 600)
   draw_and_decorate(ht, extra_lgd, title); dev.off()
   message("PNG saved.")
 

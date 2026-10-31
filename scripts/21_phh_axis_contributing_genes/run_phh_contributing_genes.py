@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'notebooks/lib'))  # this repository
 sys.path.insert(0, str(ROOT / 'src'))  # lincs_glyco_data_availability
 import task2_phh_rank_similarity as phh  # noqa: E402
+from utils.pathway_abbreviations import abbreviate_pathway  # noqa: E402
 
 R04 = ROOT / 'results/04_phh_similarity'
 OUT = ROOT / 'results/21_phh_axis_contributing_genes'
@@ -34,7 +35,7 @@ def savefig(fig, name):
     outdir = FIGDIR / name
     outdir.mkdir(parents=True, exist_ok=True)
     for ext in ('png', 'pdf', 'svg'):
-        fig.savefig(outdir / f'{name}.{ext}', dpi=300, bbox_inches='tight')
+        fig.savefig(outdir / f'{name}.{ext}', dpi=600, bbox_inches='tight')
 
 
 def read_gmt(path):
@@ -97,29 +98,31 @@ def main():
         sim.similarity_spearman.median(), 100 * (sim.similarity_spearman.abs() < 0.1).mean()))
     print('n_conditions_used distribution:', sim['n_conditions_used'].value_counts().sort_index().head(6).to_dict())
 
-    plt.rcParams.update({'axes.labelsize': 18, 'axes.titlesize': 16, 'xtick.labelsize': 16,
-                         'ytick.labelsize': 14, 'legend.fontsize': 16, 'font.size': 16, 'svg.fonttype': 'none'})
+    plt.rcParams.update({'axes.labelsize': 20, 'axes.titlesize': 20, 'xtick.labelsize': 18,
+                         'ytick.labelsize': 18, 'legend.fontsize': 18, 'font.size': 18, 'svg.fonttype': 'none'})
     # Figure 2A: top-30 compounds with bootstrap 95% CI
     t = top.iloc[::-1]
-    fig, ax = plt.subplots(figsize=(10, 12))
+    fig, ax = plt.subplots(figsize=(7, 11))
     ax.errorbar(t['similarity_spearman'], np.arange(len(t)),
                 xerr=[t['similarity_spearman'] - t['ci_low'], t['ci_high'] - t['similarity_spearman']],
                 fmt='o', color='#b2182b', ecolor='gray', capsize=3)
     ax.set_yticks(np.arange(len(t)))
-    ax.set_yticklabels(t['compound_id'])
-    ax.set_xlabel('Similarity to PHH (Spearman ρ)')
+    ax.set_yticklabels(t['compound_id'], fontsize=15)
+    ax.set_ylim(-0.7, len(t) - 0.3)
+    ax.set_xlabel('Similarity to PHH (ρ)')
     fig.tight_layout()
     savefig(fig, 'fig2a_phh_top30_similarity')
     plt.close(fig)
 
-    # Figure 2B: pathway enrichment of PHH-similar / PHH-dissimilar genes (p < 0.05)
-    sub = {lab: enr[(enr['direction'] == lab) & (enr['pvalue'] < 0.05)].sort_values('pvalue', ascending=False)
+    # Figure 2B: top pathways enriched in PHH-similar / PHH-dissimilar genes (p < 0.05, top 8 each)
+    sub = {lab: enr[(enr['direction'] == lab) & (enr['pvalue'] < 0.05)].sort_values('pvalue').head(8).iloc[::-1]
            for lab in ('PHH_similar', 'PHH_dissimilar')}
-    fig, axes = plt.subplots(2, 1, figsize=(12, 14), sharex=True,
-                             gridspec_kw={'height_ratios': [len(sub['PHH_similar']), len(sub['PHH_dissimilar'])]})
+    fig, axes = plt.subplots(2, 1, figsize=(9, 11), sharex=True)
     for ax, label, color in [(axes[0], 'PHH_similar', '#b2182b'), (axes[1], 'PHH_dissimilar', '#2166ac')]:
         e = sub[label]
-        ax.barh(e['pathway'], -np.log10(e['pvalue']), color=color)
+        names = [abbreviate_pathway(n).replace(' pathway', '').replace(' biosynthetic', ' biosynth.')
+                 for n in e['pathway']]
+        ax.barh(names, -np.log10(e['pvalue']), color=color)
         ax.axvline(-np.log10(0.05), color='gray', ls='--')
         ax.set_title(label.replace('_', '-'))
     axes[1].set_xlabel('−log10(p)')
