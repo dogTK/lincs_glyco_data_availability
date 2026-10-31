@@ -4,7 +4,7 @@ Uses the current outputs of notebook 04 (phh_similarity_scores.csv, compound_ran
 phh_rank_signature.parquet) and the same procedure: for each of the top-30 compounds take the 20 genes
 with the smallest / largest |rank_compound - rank_PHH|, keep genes appearing in >= 3 compounds, and run
 GlycoEnzOnto over-representation analysis (Fisher one-sided, background = all GlycoEnzOnto genes).
-Outputs Supplementary Tables S7-S9 and Figure 2A/2B.
+Outputs Supplementary Tables S7-S9, Figure 2A/2B, and Supplementary Figures S12/S13.
 """
 import sys
 from pathlib import Path
@@ -90,6 +90,7 @@ def main():
               .round(4).to_string(index=False))
     enr = pd.concat(res)
     enr.to_csv(OUT / 'phh_contributing_genes_pathway.csv', index=False)
+    sensitivity(sim, sig, phh_sig, pathways, background)
 
     print('\nTop 5 compounds:')
     print(top.head(5)[['compound_id', 'similarity_spearman', 'ci_low', 'ci_high', 'n_conditions_used']].round(3).to_string(index=False))
@@ -100,7 +101,7 @@ def main():
 
     plt.rcParams.update({'axes.labelsize': 20, 'axes.titlesize': 20, 'xtick.labelsize': 18,
                          'ytick.labelsize': 18, 'legend.fontsize': 18, 'font.size': 18, 'svg.fonttype': 'none'})
-    # Figure 2A: top-30 compounds with bootstrap 95% CI
+    # Supplementary Figure S13: top-30 compounds with bootstrap 95% CI
     t = top.iloc[::-1]
     fig, ax = plt.subplots(figsize=(7, 11))
     ax.errorbar(t['similarity_spearman'], np.arange(len(t)),
@@ -111,8 +112,10 @@ def main():
     ax.set_ylim(-0.7, len(t) - 0.3)
     ax.set_xlabel('Similarity to PHH (ρ)')
     fig.tight_layout()
-    savefig(fig, 'fig2a_phh_top30_similarity')
+    savefig(fig, 'figS13_phh_top30_similarity')
     plt.close(fig)
+
+    plot_similarity_distribution(sim)
 
     # Figure 2B: top pathways enriched in PHH-similar / PHH-dissimilar genes (p < 0.05, top 8 each)
     sub = {lab: enr[(enr['direction'] == lab) & (enr['pvalue'] < 0.05)].sort_values('pvalue').head(8).iloc[::-1]
@@ -142,6 +145,49 @@ def main():
         ax.tick_params(axis='y', labelsize=11)
     fig.tight_layout()
     savefig(fig, 'figS12_phh_contributing_genes_frequency')
+    plt.close(fig)
+
+
+def sensitivity(sim, sig, phh_sig, pathways, background):
+    """Does the opposite placement of pathways depend on how the top compounds are chosen?"""
+    keys = {'PHH_similar': ['keratan sulfate lysosomal degradation pathway', 'glycosaminoglycan lysosomal degradation pathway'],
+            'PHH_dissimilar': ['glycan molecular donor synthesis pathway', 'nucleotide sugar biosynthetic pathway',
+                               'terminal sialylation biosynthetic pathway']}
+    settings = [('top 30 (main)', sim.head(30), 3),
+                ('top 30, >= 2 conditions', sim[sim['n_conditions_used'] >= 2].head(30), 3),
+                ('top 50', sim.head(50), 5),
+                ('top 100', sim.head(100), 10)]
+    rows = []
+    for label, top, min_freq in settings:
+        closest, farthest = phh.identify_contributing_genes(sig, phh_sig, top['compound_id'].tolist(), n_genes=N_GENES)
+        for side, df in [('PHH_similar', closest), ('PHH_dissimilar', farthest)]:
+            freq = df['gene'].value_counts()
+            e = ora(freq[freq >= min_freq].index, pathways, background).set_index('pathway')
+            for pw in keys[side]:
+                rows.append(dict(setting=label, side=side, n_genes=int((freq >= min_freq).sum()), pathway=pw,
+                                 overlap=int(e.loc[pw, 'overlap']) if pw in e.index else 0,
+                                 pvalue=e.loc[pw, 'pvalue'] if pw in e.index else 1.0))
+    res = pd.DataFrame(rows)
+    res.to_csv(OUT / 'contributing_genes_sensitivity.csv', index=False)
+    print('\nSensitivity of pathway enrichment to the choice of top compounds (p values):')
+    print(res.pivot_table(index=['side', 'pathway'], columns='setting', values='pvalue')
+          [[s[0] for s in settings]].applymap(lambda v: f'{v:.1e}').to_string())
+
+
+def plot_similarity_distribution(sim):
+    """Figure 2A: PHH similarity of all compounds, with HDAC inhibitors marked"""
+    hub = pd.read_csv(ROOT / 'results/20_hdac_phh_repurposing_hub/phh_with_hub.csv', low_memory=False)
+    hd = hub.loc[hub['moa'].fillna('').str.contains('HDAC inhibitor'), 'similarity_spearman']
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    ax.hist(sim['similarity_spearman'], bins=60, color='lightgray', edgecolor='white')
+    ymax = ax.get_ylim()[1]
+    ax.vlines(hd, 0, ymax * 0.12, color='#b2182b', lw=1.5, label=f'HDAC inhibitors (n={len(hd)})')
+    ax.axvline(0, color='gray', lw=1, ls='--')
+    ax.set_xlabel('Similarity to PHH (ρ)')
+    ax.set_ylabel('Compounds')
+    ax.legend(frameon=False, loc='upper left')
+    fig.tight_layout()
+    savefig(fig, 'fig2a_phh_similarity_distribution')
     plt.close(fig)
 
 if __name__ == '__main__':
