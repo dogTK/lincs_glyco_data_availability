@@ -40,11 +40,28 @@ This repository contains the analysis pipeline and results for characterizing dr
 └── environment.yml         # Conda environment specification
 ```
 
+## Revision scripts (2026-11)
+
+Scripts used for the revised manuscript. They expect the project layout of the analysis repository
+(`results/02_wgcna/`, `results/04_phh_similarity/`, `results/12_phh_drug_class_enrichment/`, `data/external/`)
+produced by the notebooks above.
+
+| Script | Purpose |
+|---|---|
+| `scripts/21_phh_axis_contributing_genes/run_phh_contributing_genes.py` | Genes driving similarity to the PHH reference signature and their GlycoEnzOnto enrichment |
+| `scripts/20_hdac_phh_repurposing_hub/run_hub_phh_analysis.py` | Drug Repurposing Hub annotation, ranked enrichment of mechanism-of-action classes along the PHH similarity ranking (10,000 permutations), HDAC inhibitor robustness (perturbation-strength-matched control, per-condition similarity, module and gene profiles), and program-level shifts for all classes |
+| `scripts/23_hdaci_cross_cell_line/run_cross_cell_line.py` | HDAC inhibitor program-level shifts in eight additional LINCS cell lines |
+| `scripts/plot_integrated_atc_phh_module_complexheatmap.R` | ATC class x module GSEA heatmap with module eigengene distributions along the PHH axis |
+
+`run_cross_cell_line.py` queries Snowflake with key-pair authentication; set `SNOWFLAKE_USER`, `SNOWFLAKE_ACCOUNT`,
+`SNOWFLAKE_PRIVATE_KEY_PATH`, and optionally `SNOWFLAKE_WAREHOUSE` and `SNOWFLAKE_ROLE`.
+
 ## Data Sources
 
 - **LINCS L1000**: [LINCS Data Portal](https://lincsportal.ccs.miami.edu/)
 - **GlycoEnzOnto**: Glycosylation enzyme ontology for pathway definitions
 - **ChEMBL**: ATC classification data for drug annotation
+- **Drug Repurposing Hub** (version 2020-03-24): mechanism-of-action and target annotations, https://repo-hub.broadinstitute.org/repurposing
 
 ## Requirements
 
