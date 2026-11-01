@@ -3,6 +3,7 @@
 Splits the two PHH-dissimilar programs of script 20 into branches (GlycoEnzOnto nucleotide-sugar synthetic
 pathways with >= 3 genes; sialyltransferase families) and single genes, and repeats the per-MOA-class comparison
 (Mann-Whitney vs all other compounds, rank-biserial r, BH within each branch / gene) in HepG2.
+Also compares hydroxamate HDAC inhibitors with other compounds for every sialyltransferase detected in HepG2.
 """
 import sys
 from pathlib import Path
@@ -73,7 +74,29 @@ def main():
     print(br[br['moa'] == 'HDAC inhibitor'][['branch', 'r_rb', 'q_value']].round(3).to_string(index=False))
     print('\nGene-level hits q < 0.05 (BH within gene):')
     print(gn[gn['q_value'] < 0.05].sort_values(['gene', 'q_value']).round(4).to_string(index=False))
+    all_sialyltransferases(wide, ph)
 
+
+
+def all_sialyltransferases(wide, ph):
+    """All sialyltransferases detected in HepG2: hydroxamate HDAC inhibitors vs compounds other than HDAC inhibitors"""
+    from run_hub_phh_analysis import HYDROXAMATE
+    st = sorted(c for c in wide.columns if c.startswith(('ST3GAL', 'ST6GAL', 'ST8SIA')))
+    cz = wide[st].apply(pd.to_numeric, errors='coerce').groupby(wide['pertname']).median()
+    hx = set(HYDROXAMATE) | {'BRD-K68202742', 'BRD-A19037878'}  # trichostatin A has two Broad IDs
+    hdac = set(ph.loc[ph['moa'].fillna('').str.contains('HDAC inhibitor'), 'compound_id'])
+    landmark = set((ROOT / 'inputs/landmark_genes_978.txt').read_text().split())
+    rows = []
+    for g in st:
+        a, b = cz.loc[cz.index.isin(hx), g].dropna(), cz.loc[~cz.index.isin(hdac), g].dropna()
+        u, p = mannwhitneyu(a, b)
+        rows.append(dict(gene=g, landmark=g in landmark, n_hydroxamate=len(a), n_other=len(b),
+                         r_rb=2 * u / (len(a) * len(b)) - 1, p_value=p))
+    res = pd.DataFrame(rows)
+    res['q_value'] = multipletests(res['p_value'], method='fdr_bh')[1]
+    res.sort_values('p_value').to_csv(OUT / 'hdaci_all_sialyltransferases.csv', index=False)
+    print('\nAll sialyltransferases, hydroxamate HDAC inhibitors vs other compounds (BH across genes):')
+    print(res.sort_values('p_value').round(3).to_string(index=False))
 
 if __name__ == '__main__':
     main()
