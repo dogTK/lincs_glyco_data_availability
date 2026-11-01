@@ -3,7 +3,7 @@
 For LINCS cell lines with many compounds (and the second liver cancer line HUH7), compare hydroxamate HDAC
 inhibitors with all non-HDAC compounds on the three program scores used in script 20 (lysosomal degradation,
 nucleotide sugar synthesis, terminal sialylation). Compound-level values are medians of z-scores over all
-conditions, computed in Snowflake. Outputs: Supplementary Table S15 and Figure 4C.
+conditions, computed in Snowflake. Outputs: results/23_hdaci_cross_cell_line and Figure 3C.
 """
 import os
 import sys
@@ -20,8 +20,8 @@ from snowflake.connector import connect
 from statsmodels.stats.multitest import multipletests
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / 'scripts/20_hdac_phh_repurposing_hub'))
-from run_hub_phh_analysis import SIDE_GENE_SETS, HUB_DRUGS, HUB_SAMPLES  # noqa: E402
+sys.path.insert(0, str(ROOT / 'scripts/20_moa_glyco_programs'))
+from run_moa_programs import SIDE_GENE_SETS, LYSOSOMAL_PANEL, HUB_DRUGS, HUB_SAMPLES  # noqa: E402
 
 OUT = ROOT / 'results/23_hdaci_cross_cell_line'
 OUT.mkdir(parents=True, exist_ok=True)
@@ -30,18 +30,32 @@ CELLS = ['HEPG2', 'HUH7', 'VCAP', 'A549', 'A375', 'PC3', 'MCF7', 'HT29', 'HCC515
 MIN_HDACI = 5
 
 
+GENES = sorted({g for gs in SIDE_GENE_SETS.values() for g in gs} | set(LYSOSOMAL_PANEL))
+
+
+def credentials():
+    """Snowflake key-pair credentials from the environment, else from the default connection in
+    ~/.snowflake/config.toml"""
+    if 'SNOWFLAKE_USER' in os.environ:
+        return dict(user=os.environ['SNOWFLAKE_USER'], account=os.environ['SNOWFLAKE_ACCOUNT'],
+                    private_key_path=os.environ.get('SNOWFLAKE_PRIVATE_KEY_PATH', '~/.ssh/snowflake_rsa_key.pem'),
+                    warehouse=os.environ.get('SNOWFLAKE_WAREHOUSE'), role=os.environ.get('SNOWFLAKE_ROLE'))
+    import tomllib
+    return tomllib.load(open(os.path.expanduser('~/.snowflake/config.toml'), 'rb'))['connections']['default']
+
+
 def fetch():
     if CACHE.exists():
-        return pd.read_parquet(CACHE)
-    # Snowflake key-pair authentication; credentials come from the environment
-    key_path = os.path.expanduser(os.environ.get('SNOWFLAKE_PRIVATE_KEY_PATH', '~/.ssh/snowflake_rsa_key.pem'))
-    key = serialization.load_pem_private_key(open(key_path, 'rb').read(), password=None)
+        df = pd.read_parquet(CACHE)
+        if set(GENES) <= set(df.columns):
+            return df
+    c = credentials()
+    key = serialization.load_pem_private_key(open(os.path.expanduser(c['private_key_path']), 'rb').read(), password=None)
     der = key.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8,
                             serialization.NoEncryption())
-    con = connect(user=os.environ['SNOWFLAKE_USER'], account=os.environ['SNOWFLAKE_ACCOUNT'], private_key=der,
-                  warehouse=os.environ.get('SNOWFLAKE_WAREHOUSE'), role=os.environ.get('SNOWFLAKE_ROLE'),
-                  database='RAW', schema='LINCS')
-    genes = sorted({g for gs in SIDE_GENE_SETS.values() for g in gs})
+    con = connect(user=c['user'], account=c['account'], private_key=der, warehouse=c.get('warehouse'),
+                  role=c.get('role'), database='RAW', schema='LINCS')
+    genes = GENES
     cols = ', '.join(f'MEDIAN(TRY_TO_DOUBLE("{g}")) AS "{g}"' for g in genes)
     cells = ', '.join(f"'{c}'" for c in CELLS)
     q = (f'SELECT "cell", "pertname", MAX("inchi_key") AS "inchi_key", COUNT(*) AS "n_samples", {cols} '
@@ -98,7 +112,7 @@ def main():
 
 
 def plot_cross_cell(res):
-    """Figure 4C: rank-biserial r of hydroxamate HDAC inhibitors per cell line and program (* q < 0.05)"""
+    """Figure 3C: rank-biserial r of hydroxamate HDAC inhibitors per cell line and program (* q < 0.05)"""
     plt.rcParams.update({'axes.labelsize': 16, 'xtick.labelsize': 14, 'ytick.labelsize': 14, 'font.size': 14,
                          'svg.fonttype': 'none'})
     progs = [('lysosomal_degradation', 'Lysosomal\ndegradation'), ('nucleotide_sugar', 'Nucleotide\nsugar synthesis'),
@@ -120,10 +134,10 @@ def plot_cross_cell(res):
     ax.set_yticklabels([c if c != 'HEPG2' else 'HepG2' for c in d['cell']])
     fig.colorbar(im, ax=ax, label='Rank-biserial r', shrink=0.6)
     fig.tight_layout()
-    outdir = ROOT / 'results/figures/fig4c_hdaci_cross_cell_line'
+    outdir = ROOT / 'results/figures/fig3c_hdaci_cross_cell_line'
     outdir.mkdir(parents=True, exist_ok=True)
     for ext in ('png', 'pdf', 'svg'):
-        fig.savefig(outdir / f'fig4c_hdaci_cross_cell_line.{ext}', dpi=600, bbox_inches='tight')
+        fig.savefig(outdir / f'fig3c_hdaci_cross_cell_line.{ext}', dpi=600, bbox_inches='tight')
     plt.close(fig)
 
 if __name__ == '__main__':

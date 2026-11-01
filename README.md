@@ -12,7 +12,7 @@ This repository contains the analysis pipeline and results for characterizing dr
 - **Rank-Based Analysis**: Pure rank aggregation method for identifying consistently responsive glycogenes
 - **WGCNA Analysis**: Weighted gene co-expression network analysis to identify glycogene modules
 - **ATC Classification**: Integration with WHO ATC drug classification for therapeutic class enrichment analysis
-- **PHH Similarity Analysis**: Comparison with primary human hepatocyte expression patterns
+- **Mechanism-of-action analysis**: Module and pathway-program responses of Drug Repurposing Hub mechanism-of-action classes, including HDAC inhibitors and compounds with an HDAC inhibitor-like response
 
 ## Repository Structure
 
@@ -25,17 +25,23 @@ This repository contains the analysis pipeline and results for characterizing dr
 │   │   ├── 07_wgcna_analysis_v2.ipynb
 │   │   ├── 08_atc_module_eigengene_analysis.ipynb
 │   │   ├── 09_drug_repurposing_hub_enrichment.ipynb
-│   │   ├── 09c_atc_pathway_gsea.ipynb
-│   │   └── 10_phh_rank_similarity_analysis.ipynb
+│   │   └── 09c_atc_pathway_gsea.ipynb
 │   ├── engineering/        # Data preparation notebooks
 │   │   ├── 00_create_glyco_genes_wide_table.ipynb
 │   │   ├── 00b_create_atc_master_table.ipynb
 │   │   ├── 01_create_ctl_rnaseq_glyco_table.ipynb
 │   │   └── 11_compound_name_mapping.ipynb
 │   └── GlycoEnzOnto/       # Glycosylation enzyme ontology
+├── scripts/                # Analysis scripts for the manuscript figures and tables
+│   ├── 20_moa_glyco_programs/       # MOA class x module / program comparisons, Figures 2 and 3A,B,D
+│   ├── 22_compose_main_figures/     # assembles Figures 1-3
+│   ├── 23_hdaci_cross_cell_line/    # HDAC inhibitors in nine further cell lines, Figure 3C
+│   ├── 24_program_branch_analysis/  # nucleotide sugar / sialylation branches and genes
+│   ├── 25_supplementary_package/    # builds the supplementary PDF and Excel files
+│   ├── 26_microtubule_agents/       # microtubule-targeting agents (not used in the manuscript)
+│   └── 27_hdaci_like_compounds/     # compounds with an HDAC inhibitor-like response, Figure 3E,F
 ├── src/                    # Python modules
 │   ├── compound_name_mapping.py
-│   ├── task2_phh_rank_similarity.py
 │   └── utils/
 └── environment.yml         # Conda environment specification
 ```
