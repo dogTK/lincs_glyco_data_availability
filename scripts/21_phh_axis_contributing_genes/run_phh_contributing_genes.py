@@ -179,7 +179,7 @@ def plot_similarity_distribution(sim):
     rho = sim['similarity_spearman']
     lo, hi = rho.quantile(0.10), rho.quantile(0.90)
     bins = np.linspace(rho.min(), rho.max(), 61)
-    fig, ax = plt.subplots(figsize=(8, 5.5))
+    fig, ax = plt.subplots(figsize=(7, 11))
     for sel, color, label in [(rho <= lo, '#2166ac', 'PHH-dissimilar (bottom 10%)'),
                               ((rho > lo) & (rho < hi), 'lightgray', None),
                               (rho >= hi, '#b2182b', 'PHH-similar (top 10%)')]:
@@ -187,7 +187,7 @@ def plot_similarity_distribution(sim):
     ax.axvline(0, color='gray', lw=1, ls='--')
     ax.set_xlabel('Similarity to PHH (ρ)')
     ax.set_ylabel('Compounds')
-    ax.legend(frameon=False, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=12)
+    ax.legend(frameon=False, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=1, fontsize=15)
     fig.tight_layout()
     savefig(fig, 'fig2a_phh_similarity_distribution')
     plt.close(fig)
