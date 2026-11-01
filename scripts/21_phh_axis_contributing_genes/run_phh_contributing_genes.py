@@ -175,17 +175,19 @@ def sensitivity(sim, sig, phh_sig, pathways, background):
 
 
 def plot_similarity_distribution(sim):
-    """Figure 2A: PHH similarity of all compounds, with HDAC inhibitors marked"""
-    hub = pd.read_csv(ROOT / 'results/20_hdac_phh_repurposing_hub/phh_with_hub.csv', low_memory=False)
-    hd = hub.loc[hub['moa'].fillna('').str.contains('HDAC inhibitor'), 'similarity_spearman']
+    """Figure 2A: PHH similarity of all compounds; the top / bottom 10% define the groups compared in Figure 3"""
+    rho = sim['similarity_spearman']
+    lo, hi = rho.quantile(0.10), rho.quantile(0.90)
+    bins = np.linspace(rho.min(), rho.max(), 61)
     fig, ax = plt.subplots(figsize=(8, 5.5))
-    ax.hist(sim['similarity_spearman'], bins=60, color='lightgray', edgecolor='white')
-    ymax = ax.get_ylim()[1]
-    ax.vlines(hd, 0, ymax * 0.12, color='#b2182b', lw=1.5, label=f'HDAC inhibitors (n={len(hd)})')
+    for sel, color, label in [(rho <= lo, '#2166ac', 'PHH-dissimilar (bottom 10%)'),
+                              ((rho > lo) & (rho < hi), 'lightgray', None),
+                              (rho >= hi, '#b2182b', 'PHH-similar (top 10%)')]:
+        ax.hist(rho[sel], bins=bins, color=color, edgecolor='white', label=label)
     ax.axvline(0, color='gray', lw=1, ls='--')
     ax.set_xlabel('Similarity to PHH (ρ)')
     ax.set_ylabel('Compounds')
-    ax.legend(frameon=False, loc='upper left')
+    ax.legend(frameon=False, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2, fontsize=12)
     fig.tight_layout()
     savefig(fig, 'fig2a_phh_similarity_distribution')
     plt.close(fig)
